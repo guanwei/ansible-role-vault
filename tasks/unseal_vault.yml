@@ -1,0 +1,15 @@
+---
+- name: Read vault init output file
+  slurp:
+    path: "{{ vault_init_output_path }}"
+  register: vault_init_output_file
+
+- name: Retrieve vault unseal keys
+  set_fact:
+    unseal_keys: "{{ (vault_init_output_file.content | b64decode | from_json).unseal_keys_hex }}"
+
+- name: Unseal vault with unseal keys
+  shell: "vault operator unseal {{ unseal_key }}"
+  with_items: "{{ unseal_keys }}"
+  loop_control:
+    loop_var: unseal_key

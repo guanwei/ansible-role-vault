@@ -1,0 +1,162 @@
+---
+### ########################################################### ###
+### General section                                             ###
+### ########################################################### ###
+vault_user: vault
+vault_group: vault
+vault_version: 1.2.2
+vault_config_path: /etc/vault.hcl
+vault_init_output_path: ~/vault/vault_init.json
+vault_tokens_output_dir: ~/vault
+
+vault_download_init: false
+vault_download_dir: "vault/"
+
+backend_type: file
+
+### ########################################################### ###
+### Configuration section                                       ###
+### ########################################################### ###
+vault_configuration:
+  backend:
+    consul:
+      path: vault
+      address: 127.0.0.1:8500
+      scheme:
+      check_timeout:
+      disable_registration:
+      service:
+      service_tags:
+      token:
+      max_parallel:
+      consistency_mode:
+      tls_skip_verify:
+      tls_min_version:
+      tls_ca_file:
+      tls_cert_file:
+      tls_key_file:
+    etcd:
+      path:
+      address:
+      sync:
+      ha_enabled:
+      username:
+      password:
+      tls_ca_file:
+      tls_cert_file:
+      tls_key_file:
+    zookeeper:
+      path:
+      address:
+      auth_info:
+      znode_owner:
+    dynamodb:
+      access_key:
+      secret_key:
+      table:
+      read_capacity:
+      write_capacity:
+      session_token:
+      endpoint:
+      region:
+      max_parallel:
+      ha_enabled:
+      recovery_mode:
+    s3:
+      bucket: bucket_name
+      access_key: AKIAJWVN5Z4FOFT7NLNA
+      secret_key: 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
+      session_token:
+      endpoint:
+      region: us-east-1
+    gcs:
+      bucket:
+      credentials_file:
+      max_parallel:
+    azure:
+      accountName:
+      accountKey:
+      container:
+      max_parallel:
+    swift:
+      container:
+      username:
+      password:
+      auth_url:
+      tenant:
+      max_parallel:
+    mysql:
+      username:
+      password:
+      address:
+      database:
+      table:
+      tls_ca_file:
+    postgresql:
+      connection_url:
+      table:
+    inmem:
+    file:
+      path: /opt/vault/storage
+    ha_options:
+      redirect_addr:
+      cluster_addr:
+      disable_clustering:
+  listener: #"tcp" and "atlas" are valid values
+    tcp:
+      address: 0.0.0.0:8200
+      tls_disable: 1
+      #cluster_address:
+      #tls_cert_file:
+      #tls_key_file:
+      #tls_min_version:
+    #atlas:
+      #endpoint:
+      #infrastructure:
+      #node_id:
+      #token:
+  # telemetry:
+  #   statsite_address:
+  #   statsd_address:
+  #   disable_hostname:
+  #   circonus_api_token:
+  #   circonus_api_app:
+  #   circonus_api_url:
+  #   circonus_submission_interval:
+  #   circonus_submission_url:
+  #   circonus_check_id:
+  #   circonus_check_force_metric_activation:
+  #   circonus_check_instance_id:
+  #   circonus_check_search_tag:
+  #   circonus_check_display_name:
+  #   circonus_check_tags:
+  #   circonus_broker_id:
+  #   circonus_broker_select_tag:
+  #ha_backend:
+  #cluster_name:
+  #cache_size:
+  disable_cache: false
+  disable_mlock: false
+  #default_lease_ttl:
+  #max_lease_ttl:
+  #ui:
+
+### ########################################################### ###
+### Provision section                                           ###
+### ########################################################### ###
+
+secrets:
+  - secrets_engine: kv
+    path: secret
+
+policies: []
+#   - name: test_policy
+#     data:
+#       - path: "secret/foo"
+#         capabilities:
+#           - read
+
+tokens: []
+#   - display_name: test_token
+#     policies:
+#       - test_policy

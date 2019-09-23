@@ -1,0 +1,54 @@
+---
+- name: Set vault binary capabilities
+  capabilities:
+    path: /usr/local/bin/vault
+    capability: cap_ipc_lock+ep
+    state: present
+
+- name: Ensure vault data dir exists if backend_type == 'file'
+  file:
+    path: "{{ vault_configuration.backend[backend_type].path }}"
+    state: directory
+    owner: "{{ vault_user }}"
+    group: "{{ vault_group }}"
+    mode: 0755
+  when: backend_type == 'file'
+
+- name: Copy vault config file
+  template:
+    src: vault.hcl.j2
+    dest: "{{ vault_config_path }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_group }}"
+    mode: 0400
+  register: _vault_config_file
+
+- name: Copy vault systemd file
+  template:
+    src: vault.service.j2
+    dest: /etc/systemd/system/vault.service
+    owner: root
+    group: root
+    mode: 0644
+  register: _vault_systemd_file
+
+- name: Restart vault if needed
+  service:
+    name: vault
+    state: restarted
+    daemon_reload: true
+    enabled: yes
+  when:
+    - _vault_config_file.changed or _vault_systemd_file.changed
+
+- name: Ensure vault started and enabled on boot
+  service:
+    name: vault
+    state: started
+    enabled: true
+
+- name: set VAULT_ADDR environment var in "{{ '~/.bashrc' | expanduser }}"
+  lineinfile:
+    dest: ~/.bashrc
+    line: "export VAULT_ADDR={{ 'http' if vault_configuration.listener.tcp.tls_disable == 1 else 'https' }}://127.0.0.1:{{ vault_configuration.listener.tcp.address.split(':')[-1] }}"
+  become: false

@@ -1,0 +1,49 @@
+---
+- name: Creating vault user group
+  group: 
+    name: "{{ vault_group }}"
+    system: true
+  become: true
+  when: vault_group != "root"
+
+- name: Create vault user
+  user:
+    name: "{{ vault_user }}"
+    group: "{{ vault_group }}"
+    shell: /usr/sbin/nologin
+    comment: "vault user"
+    system: true
+    createhome: false
+  become: true
+  when: vault_user != "root"
+
+- name: Check vault version
+  shell: "vault version 2>&1 | head -n 1 | grep -q {{ vault_version }}"
+  failed_when: false
+  changed_when: false
+  register: vault_version_match
+
+- import_tasks: install_vault.yml
+  become: true
+  when: vault_version_match.rc != 0
+
+- import_tasks: configure_vault.yml
+  become: true
+
+- name: Check vault status
+  shell: vault status -format=json
+  changed_when: false
+  register: vault_status
+  failed_when: vault_status.stderr != ""
+  become: false
+
+- import_tasks: init_vault.yml
+  when: (vault_status.stdout | from_json).initialized != true
+  become: false
+
+- import_tasks: unseal_vault.yml
+  when: (vault_status.stdout | from_json).sealed == true
+  become: false
+
+- import_tasks: provision_vault.yml
+  become: false

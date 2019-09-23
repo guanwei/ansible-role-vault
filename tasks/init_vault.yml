@@ -1,0 +1,24 @@
+---
+- name: Initialise vault
+  shell: vault operator init -key-shares=5 -key-threshold=3 -format=json
+  register: _vault_init
+
+- name: Ensure "{{ vault_init_output_path | dirname }}" dir exists
+  file:
+    path: "{{ vault_init_output_path | dirname }}"
+    recurse: yes
+    state: directory
+
+- name: Save vault init output
+  copy:
+    content: "{{ _vault_init.stdout | from_json | to_nice_json }}"
+    dest: "{{ vault_init_output_path }}"
+    mode: 0600
+
+- name: Download vault init output
+  fetch:
+    src: "{{ vault_init_output_path }}"
+    dest: "{{ vault_download_dir }}/"
+    flat: true
+    validate_checksum: true
+  when: vault_download_init

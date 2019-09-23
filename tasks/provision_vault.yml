@@ -1,0 +1,68 @@
+---
+- name: Read vault init output file
+  slurp:
+    path: "{{ vault_init_output_path }}"
+  register: vault_init_output_file
+
+- name: Retrieve vault root token
+  set_fact:
+    root_token: "{{ (vault_init_output_file.content | b64decode | from_json).root_token }}"
+
+- name: Retrieve vault secrets
+  shell: vault secrets list -format=json
+  environment:
+    VAULT_TOKEN: "{{ root_token }}"
+  changed_when: false
+  register: _vault_secrets
+
+- name: Enable vault secrets
+  shell: "vault secrets enable -path={{ secret.path }} {{ secret.secrets_engine }}"
+  environment:
+    VAULT_TOKEN: "{{ root_token }}"
+  with_items: "{{ secrets }}"
+  loop_control:
+    loop_var: secret
+  when: ( secret.path | regex_replace('/$','') + '/') not in (_vault_secrets.stdout | from_json).keys() | list
+
+- name: Generate vault policy files
+  template:
+    src: policy.hcl.j2
+    dest: "/tmp/vault_policy_{{ policy.name }}.hcl"
+  with_items: "{{ policies }}"
+  loop_control:
+    loop_var: policy
+
+- name: Write vault polices
+  shell: "vault policy write {{ policy.name }} /tmp/vault_policy_{{ policy.name }}.hcl"
+  environment:
+    VAULT_TOKEN: "{{ root_token }}"
+  with_items: "{{ policies }}"
+  loop_control:
+    loop_var: policy
+
+- name: Retrieve vault token names
+  shell: "ls {{ vault_tokens_output_dir }}/token-*.json | xargs -n 1 basename | cut -d '.' -f1"
+  changed_when: false
+  register: _token_names
+
+- name: Create vault tokens
+  shell: "vault token create -display-name={{ token.display_name }} {% for policy in token.policies %}-policy={{ policy }}{% if not loop.last %} {% endif %}{% endfor %} -format=json"
+  environment:
+    VAULT_TOKEN: "{{ root_token }}"
+  with_items: "{{ tokens }}"
+  loop_control:
+    loop_var: token
+  register: _create_vault_tokens
+  when: ('token-' + token.display_name | replace('_','-')) not in _token_names.stdout.split()
+
+- name: Save vault tokens
+  copy:
+    content: "{{ (token.1.stdout | from_json).auth | to_nice_json }}"
+    dest: "{{ vault_tokens_output_dir }}/token-{{ token.0.display_name | replace('_','-') }}.json"
+    mode: 0600
+  with_together:
+    - "{{ tokens }}"
+    - "{{ _create_vault_tokens.results }}"
+  loop_control:
+    loop_var: token
+  when: ('token-' + token.0.display_name | replace('_','-')) not in _token_names.stdout.split()

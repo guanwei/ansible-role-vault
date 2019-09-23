@@ -1,0 +1,5 @@
+{% for data in policy.data %}
+path "{{ data.path }}" {
+  capabilities = [ "{{ data.capabilities | join('", "') }}" ]
+}
+{% endfor %}
